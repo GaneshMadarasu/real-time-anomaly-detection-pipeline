@@ -48,6 +48,20 @@ Producer → Feature Engineer (Faust) → ML Inference (River) → anomaly-score
 - **Batched DB writes**: All TimescaleDB writes flush every 100 rows OR every 5s via a background thread `BatchWriter` class.
 - **Dynamic threshold**: ml-inference auto-adjusts threshold ±0.01 based on rolling anomaly rate (target 0.1%–5%).
 
+## Compatibility Fixes (applied)
+
+These bugs were found and fixed during initial bring-up — do not revert them:
+
+- **`KafkaException` → `KafkaError`**: `kafka-python 2.0.2` does not export `KafkaException` from `kafka.errors`. All five services use `from kafka.errors import KafkaError as KafkaException`.
+- **TimescaleDB unique index**: `scored_events` is a hypertable partitioned by `timestamp`. A `UNIQUE INDEX` on `(event_id)` alone is illegal — changed to a regular `INDEX` on `(event_id, timestamp DESC)` in `db/init.sql`.
+- **Zookeeper health check**: The `ruok` four-letter command is not whitelisted by default in `confluentinc/cp-zookeeper:7.4.0`. Health check changed to `nc -z localhost 2181` (TCP port probe).
+- **`river.drift.DDM`**: In River 0.21.0, `DDM` lives at `river.drift.binary.DDM`, not `river.drift.DDM`. Import updated in `drift-detector/main.py`.
+- **feature-engineer aiokafka pin**: `faust-streaming 0.11.3` passes `api_version` to `AIOKafkaProducer`, which was removed in `aiokafka 0.11+`. `requirements.txt` pins `aiokafka==0.10.0`. The `app.on_start.connect` / `app.on_stop.connect` signal API is also not available in this Faust version — those non-critical hooks were removed.
+
+## Files of Note
+
+- `system-design.html` — interactive SVG architecture diagram at the repo root; open in a browser for a full visual overview of the pipeline.
+
 ### Phase Simulation
 
 Producer cycles: Normal (0–99,999) → Drift (100,000–199,999) → Attack (200,000–249,999) → repeat.
