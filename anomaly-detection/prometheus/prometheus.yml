@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'producer'
+    static_configs:
+      - targets: ['producer:8001']
+
+  - job_name: 'feature-engineer'
+    static_configs:
+      - targets: ['feature-engineer:8002']
+
+  - job_name: 'ml-inference'
+    static_configs:
+      - targets: ['ml-inference:8003']
+
+  - job_name: 'drift-detector'
+    static_configs:
+      - targets: ['drift-detector:8004']
+
+  - job_name: 'retraining-worker'
+    static_configs:
+      - targets: ['retraining-worker:8005']
+
+  - job_name: 'alert-router'
+    static_configs:
+      - targets: ['alert-router:8006']

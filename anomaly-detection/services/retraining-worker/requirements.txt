@@ -1,0 +1,7 @@
+celery==5.3.4
+river==0.21.0
+redis==5.0.1
+kafka-python==2.0.2
+psycopg2-binary==2.9.9
+prometheus-client==0.17.1
+flower==2.0.1
