@@ -1,4 +1,10 @@
-# SKILL.md — Infrastructure
+---
+name: infrastructure
+description: Docker Compose patterns, Kafka config, TimescaleDB schema and hypertable rules, Prometheus scrape config, Grafana provisioning, Dockerfile patterns, and requirements.txt pinning for this anomaly detection pipeline. Load when modifying infrastructure, docker-compose.yml, db/init.sql, or adding new services.
+allowed-tools: Read, Grep, Glob
+---
+
+# Infrastructure — Real-Time Anomaly Detection Pipeline
 
 ## Docker Compose Patterns
 

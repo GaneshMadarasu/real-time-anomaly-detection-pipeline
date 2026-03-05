@@ -1,4 +1,10 @@
-# SKILL.md — Alert Router Service
+---
+name: alert-router
+description: Reference for the alert-router service (port 8006): severity bucketing thresholds, Redis dedup TTL pattern, Slack webhook integration, dual-consumer threading model (Consumer A + B), AlertBatchWriter, and known gotchas. Load when working on anomaly-detection/services/alert-router/main.py.
+allowed-tools: Read, Grep, Glob
+---
+
+# Alert Router Service
 
 ## Purpose
 

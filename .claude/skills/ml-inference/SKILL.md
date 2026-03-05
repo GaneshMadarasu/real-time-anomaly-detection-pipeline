@@ -1,4 +1,10 @@
-# SKILL.md — ML Inference Service
+---
+name: ml-inference
+description: Reference for the ml-inference service (port 8003): River HalfSpaceTrees + StandardAbsoluteDeviation ensemble, score-before-learn rule, dynamic threshold auto-adjustment, Redis model persistence and hot-swap, and known gotchas. Load when working on anomaly-detection/services/ml-inference/main.py.
+allowed-tools: Read, Grep, Glob
+---
+
+# ML Inference Service
 
 ## Purpose
 

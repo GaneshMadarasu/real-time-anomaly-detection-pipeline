@@ -1,4 +1,10 @@
-# SKILL.md — Producer Service
+---
+name: producer
+description: Reference for the producer service (port 8001): synthetic data generation, three-phase config (Normal/Drift/Attack), anomaly label rules, per-user in-memory state tracking, Kafka producer setup with fixed-delay retry, and known gotchas. Load when working on anomaly-detection/services/producer/main.py.
+allowed-tools: Read, Grep, Glob
+---
+
+# Producer Service
 
 ## Purpose
 

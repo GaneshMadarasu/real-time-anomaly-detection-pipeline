@@ -1,4 +1,10 @@
-# SKILL.md — Feature Engineer Service
+---
+name: feature-engineer
+description: Reference for the feature-engineer service (port 8002): Faust app setup, Redis sorted-set sliding window pattern, feature computation table, Kafka I/O config, and known gotchas. Load when working on anomaly-detection/services/feature-engineer/main.py.
+allowed-tools: Read, Grep, Glob
+---
+
+# Feature Engineer Service
 
 ## Purpose
 

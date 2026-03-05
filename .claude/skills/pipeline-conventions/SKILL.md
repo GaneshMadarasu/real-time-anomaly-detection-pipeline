@@ -1,4 +1,10 @@
-# SKILL.md — Real-Time Anomaly Detection Pipeline
+---
+name: pipeline-conventions
+description: Project-wide coding conventions, absolute rules, logging patterns, service startup patterns, SIGTERM handling, and env var conventions for this anomaly detection pipeline. Load when writing or reviewing any service code.
+allowed-tools: Read, Grep, Glob
+---
+
+# Pipeline Conventions — Real-Time Anomaly Detection Pipeline
 
 ## Project Overview
 

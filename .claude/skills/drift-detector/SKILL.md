@@ -1,4 +1,10 @@
-# SKILL.md — Drift Detector Service
+---
+name: drift-detector
+description: Reference for the drift-detector service (port 8004): ADWIN per-feature setup, DDM binary error pattern, 300s Redis cooldown, drift event schema for drift-events and retraining-triggers topics, BatchWriter, and known gotchas. Load when working on anomaly-detection/services/drift-detector/main.py.
+allowed-tools: Read, Grep, Glob
+---
+
+# Drift Detector Service
 
 ## Purpose
 

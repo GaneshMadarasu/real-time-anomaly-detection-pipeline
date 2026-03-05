@@ -1,4 +1,10 @@
-# SKILL.md — Retraining Worker Service
+---
+name: retraining-worker
+description: Reference for the retraining-worker service (port 8005): Celery app setup, subprocess worker pattern, retrain_model task, shadow accuracy testing, model version promotion to Redis, and known gotchas including the scored_events gap. Load when working on anomaly-detection/services/retraining-worker/main.py.
+allowed-tools: Read, Grep, Glob
+---
+
+# Retraining Worker Service
 
 ## Purpose
 
