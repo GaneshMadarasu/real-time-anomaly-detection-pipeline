@@ -5,1136 +5,311 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Real-Time Anomaly Detection Pipeline — System Design</title>
   <style>
-    :root {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --surface2: #21262d;
-      --border: #30363d;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --accent-blue: #58a6ff;
-      --accent-green: #3fb950;
-      --accent-orange: #f0883e;
-      --accent-purple: #bc8cff;
-      --accent-red: #f85149;
-      --accent-cyan: #79c0ff;
-      --accent-yellow: #e3b341;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
       min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* ── Header ── */
-    header {
-      background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
-      border-bottom: 1px solid var(--border);
-      padding: 2.5rem 3rem 2rem;
-      position: relative;
-      overflow: hidden;
-    }
-    header::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(88,166,255,0.12) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    header h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      background: linear-gradient(135deg, #e6edf3 30%, #58a6ff 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    header p {
-      color: var(--muted);
-      margin-top: 0.4rem;
-      font-size: 0.95rem;
-    }
-    .badges {
       display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      margin-top: 1.2rem;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1.5rem;
     }
-    .badge {
-      padding: 0.25rem 0.75rem;
-      border-radius: 20px;
-      font-size: 0.75rem;
+
+    h1 {
+      font-size: 1.4rem;
       font-weight: 600;
-      letter-spacing: 0.3px;
-      border: 1px solid;
-    }
-    .badge-blue  { color: var(--accent-blue);   border-color: rgba(88,166,255,.3);  background: rgba(88,166,255,.08);  }
-    .badge-green { color: var(--accent-green);  border-color: rgba(63,185,80,.3);   background: rgba(63,185,80,.08);   }
-    .badge-orange{ color: var(--accent-orange); border-color: rgba(240,136,62,.3);  background: rgba(240,136,62,.08);  }
-    .badge-purple{ color: var(--accent-purple); border-color: rgba(188,140,255,.3); background: rgba(188,140,255,.08); }
-
-    /* ── Layout ── */
-    main {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 2.5rem 2rem 4rem;
+      color: #58a6ff;
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.02em;
     }
 
-    /* ── Section title ── */
-    .section-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: var(--muted);
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      margin-bottom: 1.2rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    /* ── Pipeline Diagram ── */
-    .pipeline-wrapper {
-      overflow-x: auto;
-      padding-bottom: 1rem;
+    .subtitle {
+      font-size: 0.85rem;
+      color: #8b949e;
       margin-bottom: 3rem;
     }
 
-    .pipeline {
+    .diagram {
+      width: 100%;
+      max-width: 640px;
       display: flex;
-      align-items: stretch;
+      flex-direction: column;
       gap: 0;
-      min-width: 1100px;
-      position: relative;
     }
 
-    /* connector arrows between stages */
-    .arrow {
-      display: flex;
-      align-items: center;
-      padding: 0 0.1rem;
-      flex-shrink: 0;
-    }
-    .arrow svg { width: 44px; height: 28px; }
-
-    /* Topic pills inside arrows */
-    .topic-pill {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 0.22rem 0.65rem;
-      font-size: 0.65rem;
-      font-weight: 600;
-      color: var(--accent-yellow);
-      white-space: nowrap;
-      text-align: center;
-      letter-spacing: 0.2px;
+    .block {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1rem 1.4rem;
     }
 
-    /* ── Service Card ── */
-    .svc {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.1rem 1rem 1rem;
-      position: relative;
-      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-      cursor: default;
-      min-width: 155px;
+    .block-title {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.45rem;
     }
-    .svc:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+
+    .block-desc {
+      font-size: 0.82rem;
+      color: #8b949e;
+      line-height: 1.65;
     }
-    .svc.blue   { border-top: 3px solid var(--accent-blue);   }
-    .svc.green  { border-top: 3px solid var(--accent-green);  }
-    .svc.orange { border-top: 3px solid var(--accent-orange); }
-    .svc.purple { border-top: 3px solid var(--accent-purple); }
-    .svc.red    { border-top: 3px solid var(--accent-red);    }
-    .svc.cyan   { border-top: 3px solid var(--accent-cyan);   }
 
-    .svc:hover { border-color: #58a6ff55; }
-
-    .svc-icon {
-      font-size: 1.6rem;
-      margin-bottom: 0.5rem;
+    .block-desc span {
       display: block;
     }
-    .svc-name {
+
+    /* colours per service */
+    .producer   .block-title { color: #3fb950; }
+    .feature    .block-title { color: #58a6ff; }
+    .inference  .block-title { color: #bc8cff; }
+    .drift      .block-title { color: #f0883e; }
+    .alert      .block-title { color: #f85149; }
+    .retrain    .block-title { color: #e3b341; }
+    .storage    .block-title { color: #79c0ff; }
+
+    /* Kafka topic pill */
+    .topic {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.35rem 0;
+    }
+
+    .topic-pill {
+      background: #21262d;
+      border: 1px solid #388bfd55;
+      border-radius: 20px;
+      padding: 0.28rem 1.1rem;
+      font-size: 0.78rem;
+      color: #58a6ff;
+      letter-spacing: 0.04em;
+    }
+
+    /* arrows */
+    .arrow {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 28px;
+      color: #484f58;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    /* split layout for drift + alert side-by-side */
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .split-arrows {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    /* Redis / storage note */
+    .redis-note {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-left: 3px solid #e3b341;
+      border-radius: 6px;
+      padding: 0.6rem 1rem;
+      font-size: 0.8rem;
+      color: #8b949e;
+      text-align: center;
+    }
+
+    .redis-note strong {
+      color: #e3b341;
+    }
+
+    /* bottom storage row */
+    .storage-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .storage-item {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      text-align: center;
+    }
+
+    .storage-item .label {
       font-size: 0.82rem;
       font-weight: 700;
-      letter-spacing: 0.2px;
-      margin-bottom: 0.2rem;
+      color: #79c0ff;
+      letter-spacing: 0.05em;
     }
-    .svc-port {
-      font-size: 0.68rem;
-      color: var(--muted);
-      margin-bottom: 0.55rem;
-    }
-    .svc-tech {
-      font-size: 0.67rem;
-      padding: 0.18rem 0.5rem;
-      border-radius: 4px;
-      font-weight: 600;
-      display: inline-block;
-      margin-bottom: 0.55rem;
-    }
-    .tech-blue   { background: rgba(88,166,255,.15);  color: var(--accent-blue);   }
-    .tech-green  { background: rgba(63,185,80,.15);   color: var(--accent-green);  }
-    .tech-orange { background: rgba(240,136,62,.15);  color: var(--accent-orange); }
-    .tech-purple { background: rgba(188,140,255,.15); color: var(--accent-purple); }
-    .tech-red    { background: rgba(248,81,73,.15);   color: var(--accent-red);    }
-    .tech-cyan   { background: rgba(121,192,255,.15); color: var(--accent-cyan);   }
 
-    .svc-desc {
-      font-size: 0.7rem;
-      color: var(--muted);
+    .storage-item .desc {
+      font-size: 0.75rem;
+      color: #8b949e;
+      margin-top: 0.3rem;
       line-height: 1.5;
     }
 
-    /* tooltip on hover */
-    .svc .tooltip {
-      display: none;
-      position: absolute;
-      bottom: calc(100% + 10px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1c2128;
-      border: 1px solid #444c56;
-      border-radius: 10px;
-      padding: 0.9rem 1rem;
-      width: 260px;
-      font-size: 0.72rem;
-      line-height: 1.6;
-      color: var(--text);
-      z-index: 100;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-      pointer-events: none;
-    }
-    .svc:hover .tooltip { display: block; }
-    .tooltip h4 {
-      font-size: 0.78rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-      color: var(--accent-blue);
-    }
-    .tooltip ul { list-style: none; }
-    .tooltip ul li::before { content: "→ "; color: var(--accent-yellow); }
-    .tooltip ul li { color: var(--muted); margin-bottom: 0.2rem; }
-
-    /* ── Kafka Topics bar ── */
-    .topics-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-      margin-bottom: 3rem;
-    }
-    .topic-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--accent-yellow);
-      border-radius: 8px;
-      padding: 0.6rem 1rem;
-      font-size: 0.75rem;
-    }
-    .topic-card strong {
-      display: block;
-      color: var(--accent-yellow);
-      font-size: 0.72rem;
-      margin-bottom: 0.15rem;
-      font-family: "SFMono-Regular", Consolas, monospace;
-    }
-    .topic-card span { color: var(--muted); font-size: 0.68rem; }
-
-    /* ── Infra grid ── */
-    .infra-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 1rem;
-      margin-bottom: 3rem;
-    }
-    .infra-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 1.1rem 1.1rem 1rem;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .infra-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,.4); }
-    .infra-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
-    .infra-name { font-weight: 700; font-size: 0.85rem; margin-bottom: 0.2rem; }
-    .infra-sub  { font-size: 0.7rem; color: var(--muted); margin-bottom: 0.6rem; }
-    .infra-list { list-style: none; }
-    .infra-list li {
-      font-size: 0.7rem;
-      color: var(--muted);
-      padding: 0.2rem 0;
-      border-bottom: 1px solid #21262d;
-      display: flex;
-      align-items: flex-start;
-      gap: 0.4rem;
-    }
-    .infra-list li::before { content: "•"; color: var(--accent-blue); flex-shrink: 0; margin-top: 0.05rem; }
-    .infra-list li:last-child { border-bottom: none; }
-
-    /* ── Data flow table ── */
-    .flow-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.78rem;
-      margin-bottom: 3rem;
-    }
-    .flow-table th {
-      background: var(--surface2);
-      padding: 0.7rem 1rem;
-      text-align: left;
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: var(--muted);
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      border-bottom: 2px solid var(--border);
-    }
-    .flow-table td {
-      padding: 0.7rem 1rem;
-      border-bottom: 1px solid var(--border);
-      vertical-align: middle;
-      color: var(--text);
-    }
-    .flow-table tr:last-child td { border-bottom: none; }
-    .flow-table tr:hover td { background: rgba(255,255,255,.02); }
-
-    code {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 0.1rem 0.4rem;
-      font-family: "SFMono-Regular", Consolas, monospace;
-      font-size: 0.72rem;
-      color: var(--accent-cyan);
+    .divider {
+      border: none;
+      border-top: 1px dashed #30363d;
+      margin: 1.8rem 0 1.2rem;
     }
 
-    /* ── Phase simulation ── */
-    .phase-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-      margin-bottom: 3rem;
-    }
-    .phase-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 1.2rem;
-    }
-    .phase-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 0.3rem;
-    }
-    .phase-range {
-      font-size: 0.72rem;
-      color: var(--muted);
-      margin-bottom: 0.6rem;
-      font-family: "SFMono-Regular", Consolas, monospace;
-    }
-    .phase-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
-    .phase-normal  .phase-label { color: var(--accent-green);  }
-    .phase-drift   .phase-label { color: var(--accent-orange); }
-    .phase-attack  .phase-label { color: var(--accent-red);    }
-    .phase-normal  { border-left: 3px solid var(--accent-green);  }
-    .phase-drift   { border-left: 3px solid var(--accent-orange); }
-    .phase-attack  { border-left: 3px solid var(--accent-red);    }
-
-    /* ── Metrics grid ── */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1rem;
-      margin-bottom: 3rem;
-    }
-    .metrics-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 1rem;
-    }
-    .metrics-service {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--accent-blue);
-      margin-bottom: 0.6rem;
-      letter-spacing: 0.3px;
-      text-transform: uppercase;
-    }
-    .metric-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.5rem;
-      padding: 0.3rem 0;
-      border-bottom: 1px solid #21262d;
-      font-size: 0.7rem;
-    }
-    .metric-item:last-child { border-bottom: none; }
-    .metric-name { font-family: "SFMono-Regular", Consolas, monospace; color: var(--accent-cyan); flex-shrink: 0; }
-    .metric-desc { color: var(--muted); }
-
-    /* ── Arch diagram (SVG) ── */
-    .arch-svg-wrapper {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 2rem;
-      margin-bottom: 3rem;
-      overflow-x: auto;
-    }
-
-    /* ── Footer ── */
-    footer {
+    .everything-label {
       text-align: center;
-      padding: 2rem;
-      color: var(--muted);
-      font-size: 0.75rem;
-      border-top: 1px solid var(--border);
-    }
-
-    /* ── Responsive ── */
-    @media (max-width: 768px) {
-      header { padding: 1.5rem 1.2rem 1.2rem; }
-      header h1 { font-size: 1.4rem; }
-      main { padding: 1.5rem 1rem 3rem; }
-      .phase-row { grid-template-columns: 1fr; }
+      font-size: 0.78rem;
+      color: #484f58;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.9rem;
     }
   </style>
 </head>
 <body>
 
-<header>
   <h1>Real-Time Anomaly Detection Pipeline</h1>
-  <p>End-to-end streaming architecture for financial transaction fraud detection with online ML, drift detection, and auto-retraining</p>
-  <div class="badges">
-    <span class="badge badge-blue">Kafka Streaming</span>
-    <span class="badge badge-green">River Online ML</span>
-    <span class="badge badge-orange">Faust DSP</span>
-    <span class="badge badge-purple">Celery + TimescaleDB</span>
-    <span class="badge badge-blue">6 Microservices</span>
-    <span class="badge badge-green">Prometheus + Grafana</span>
-  </div>
-</header>
+  <p class="subtitle">6 microservices · Kafka · Redis · TimescaleDB · Prometheus · Grafana</p>
 
-<main>
+  <div class="diagram">
 
-  <!-- ─────────────── ARCHITECTURE SVG ─────────────── -->
-  <div class="section-title">Architecture Overview</div>
+    <!-- PRODUCER -->
+    <div class="block producer">
+      <div class="block-title">PRODUCER</div>
+      <div class="block-desc">
+        <span>Generates a fake financial transaction every 10ms</span>
+        <span>Phase 1 (Normal) &rarr; Phase 2 (Drift) &rarr; Phase 3 (Attack) &rarr; repeat</span>
+      </div>
+    </div>
 
-  <div class="arch-svg-wrapper">
-    <svg viewBox="0 0 1100 520" xmlns="http://www.w3.org/2000/svg"
-         style="width:100%;max-width:1100px;display:block;margin:auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+    <div class="arrow">&darr;</div>
+    <div class="topic"><span class="topic-pill">Kafka: raw-transactions</span></div>
+    <div class="arrow">&darr;</div>
 
-      <defs>
-        <!-- Arrowhead markers -->
-        <marker id="arrowBlue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L8,3 z" fill="#58a6ff"/>
-        </marker>
-        <marker id="arrowYellow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L8,3 z" fill="#e3b341"/>
-        </marker>
-        <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L8,3 z" fill="#3fb950"/>
-        </marker>
-        <marker id="arrowRed" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L8,3 z" fill="#f85149"/>
-        </marker>
-        <marker id="arrowPurple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L8,3 z" fill="#bc8cff"/>
-        </marker>
-        <!-- Glow filter -->
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
+    <!-- FEATURE ENGINEER -->
+    <div class="block feature">
+      <div class="block-title">FEATURE ENGINEER</div>
+      <div class="block-desc">
+        <span>Looks up sliding-window stats from Redis (averages, velocity, risk flags)</span>
+        <span>Attaches computed features to the event</span>
+      </div>
+    </div>
 
-      <!-- ── Background layers ── -->
-      <!-- Kafka layer label -->
-      <rect x="8" y="180" width="1084" height="78" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" stroke-dasharray="4,3"/>
-      <text x="18" y="196" font-size="9" fill="#555" font-weight="600" letter-spacing="1">KAFKA BROKER  (kafka:29092 internal · localhost:9092 external · 7 topics · 3 partitions each)</text>
+    <div class="arrow">&darr;</div>
+    <div class="topic"><span class="topic-pill">Kafka: enriched-features</span></div>
+    <div class="arrow">&darr;</div>
 
-      <!-- Infrastructure bar label -->
-      <rect x="8" y="430" width="1084" height="78" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" stroke-dasharray="4,3"/>
-      <text x="18" y="446" font-size="9" fill="#555" font-weight="600" letter-spacing="1">SHARED INFRASTRUCTURE</text>
+    <!-- ML INFERENCE -->
+    <div class="block inference">
+      <div class="block-title">ML INFERENCE</div>
+      <div class="block-desc">
+        <span>Scores each transaction from 0.0 (normal) to 1.0 (anomalous)</span>
+        <span>Updates the model instantly after scoring (online learning)</span>
+        <span>Flags event as anomaly if score &gt; dynamic threshold</span>
+        <span>Auto-adjusts threshold to keep anomaly rate between 0.1% &ndash; 5%</span>
+      </div>
+    </div>
 
-      <!-- ─── SERVICE BOXES ─── -->
+    <div class="arrow">&darr;</div>
+    <div class="topic"><span class="topic-pill">Kafka: anomaly-scores</span></div>
 
-      <!-- Producer -->
-      <rect x="20" y="48" width="138" height="112" rx="10" fill="#161b22" stroke="#58a6ff" stroke-width="1.5" filter="url(#glow)"/>
-      <rect x="20" y="48" width="138" height="5" rx="10" fill="#58a6ff"/>
-      <text x="89" y="72"  text-anchor="middle" font-size="18">🏭</text>
-      <text x="89" y="90"  text-anchor="middle" font-size="11" font-weight="700" fill="#e6edf3">Producer</text>
-      <text x="89" y="104" text-anchor="middle" font-size="9"  fill="#8b949e">Port 8001</text>
-      <text x="89" y="118" text-anchor="middle" font-size="8.5" fill="#58a6ff">kafka-python</text>
-      <text x="89" y="134" text-anchor="middle" font-size="8"  fill="#8b949e">Synthetic txn gen</text>
-      <text x="89" y="148" text-anchor="middle" font-size="8"  fill="#8b949e">100 events/sec</text>
+    <!-- split arrows -->
+    <div class="split-arrows">
+      <div class="arrow">&swarr;</div>
+      <div class="arrow">&searr;</div>
+    </div>
 
-      <!-- Feature Engineer -->
-      <rect x="210" y="48" width="148" height="112" rx="10" fill="#161b22" stroke="#f0883e" stroke-width="1.5"/>
-      <rect x="210" y="48" width="148" height="5" rx="10" fill="#f0883e"/>
-      <text x="284" y="72"  text-anchor="middle" font-size="18">⚙️</text>
-      <text x="284" y="90"  text-anchor="middle" font-size="11" font-weight="700" fill="#e6edf3">Feature Engineer</text>
-      <text x="284" y="104" text-anchor="middle" font-size="9"  fill="#8b949e">Port 8002</text>
-      <text x="284" y="118" text-anchor="middle" font-size="8.5" fill="#f0883e">Faust Streaming</text>
-      <text x="284" y="134" text-anchor="middle" font-size="8"  fill="#8b949e">Sliding-window features</text>
-      <text x="284" y="148" text-anchor="middle" font-size="8"  fill="#8b949e">Redis-backed windows</text>
-
-      <!-- ML Inference -->
-      <rect x="415" y="48" width="148" height="112" rx="10" fill="#161b22" stroke="#3fb950" stroke-width="1.5"/>
-      <rect x="415" y="48" width="148" height="5" rx="10" fill="#3fb950"/>
-      <text x="489" y="72"  text-anchor="middle" font-size="18">🤖</text>
-      <text x="489" y="90"  text-anchor="middle" font-size="11" font-weight="700" fill="#e6edf3">ML Inference</text>
-      <text x="489" y="104" text-anchor="middle" font-size="9"  fill="#8b949e">Port 8003</text>
-      <text x="489" y="118" text-anchor="middle" font-size="8.5" fill="#3fb950">River HalfSpaceTrees</text>
-      <text x="489" y="134" text-anchor="middle" font-size="8"  fill="#8b949e">Online scoring + SAD</text>
-      <text x="489" y="148" text-anchor="middle" font-size="8"  fill="#8b949e">Dynamic threshold</text>
-
-      <!-- Drift Detector -->
-      <rect x="635" y="30" width="148" height="112" rx="10" fill="#161b22" stroke="#bc8cff" stroke-width="1.5"/>
-      <rect x="635" y="30" width="148" height="5" rx="10" fill="#bc8cff"/>
-      <text x="709" y="54"  text-anchor="middle" font-size="18">📡</text>
-      <text x="709" y="72"  text-anchor="middle" font-size="11" font-weight="700" fill="#e6edf3">Drift Detector</text>
-      <text x="709" y="86"  text-anchor="middle" font-size="9"  fill="#8b949e">Port 8004</text>
-      <text x="709" y="100" text-anchor="middle" font-size="8.5" fill="#bc8cff">River ADWIN + DDM</text>
-      <text x="709" y="114" text-anchor="middle" font-size="8"  fill="#8b949e">Data &amp; concept drift</text>
-      <text x="709" y="128" text-anchor="middle" font-size="8"  fill="#8b949e">→ retraining-triggers</text>
-
-      <!-- Alert Router -->
-      <rect x="635" y="170" width="148" height="86" rx="10" fill="#161b22" stroke="#f85149" stroke-width="1.5"/>
-      <rect x="635" y="170" width="148" height="5" rx="10" fill="#f85149"/>
-      <text x="709" y="193" text-anchor="middle" font-size="18">🚨</text>
-      <text x="709" y="211" text-anchor="middle" font-size="11" font-weight="700" fill="#e6edf3">Alert Router</text>
-      <text x="709" y="225" text-anchor="middle" font-size="9"  fill="#8b949e">Port 8006</text>
-      <text x="709" y="239" text-anchor="middle" font-size="8"  fill="#8b949e">Severity bucketing · dedup · Slack</text>
-
-      <!-- Retraining Worker -->
-      <rect x="855" y="48" width="148" height="112" rx="10" fill="#161b22" stroke="#79c0ff" stroke-width="1.5"/>
-      <rect x="855" y="48" width="148" height="5" rx="10" fill="#79c0ff"/>
-      <text x="929" y="72"  text-anchor="middle" font-size="18">🔁</text>
-      <text x="929" y="90"  text-anchor="middle" font-size="11" font-weight="700" fill="#e6edf3">Retraining Worker</text>
-      <text x="929" y="104" text-anchor="middle" font-size="9"  fill="#8b949e">Port 8005</text>
-      <text x="929" y="118" text-anchor="middle" font-size="8.5" fill="#79c0ff">Celery + River</text>
-      <text x="929" y="134" text-anchor="middle" font-size="8"  fill="#8b949e">Shadow-test &amp; promote</text>
-      <text x="929" y="148" text-anchor="middle" font-size="8"  fill="#8b949e">Celery Flower :5555</text>
-
-      <!-- ─── KAFKA TOPIC PILLS ─── -->
-      <!-- raw-transactions -->
-      <rect x="158" y="198" width="46" height="40" rx="6" fill="#21262d" stroke="#e3b341" stroke-width="1"/>
-      <text x="181" y="212" text-anchor="middle" font-size="6.5" fill="#e3b341" font-weight="700">raw-</text>
-      <text x="181" y="224" text-anchor="middle" font-size="6.5" fill="#e3b341" font-weight="700">transactions</text>
-
-      <!-- enriched-features -->
-      <rect x="368" y="198" width="46" height="40" rx="6" fill="#21262d" stroke="#e3b341" stroke-width="1"/>
-      <text x="391" y="212" text-anchor="middle" font-size="6.5" fill="#e3b341" font-weight="700">enriched-</text>
-      <text x="391" y="224" text-anchor="middle" font-size="6.5" fill="#e3b341" font-weight="700">features</text>
-
-      <!-- anomaly-scores -->
-      <rect x="567" y="198" width="46" height="40" rx="6" fill="#21262d" stroke="#e3b341" stroke-width="1"/>
-      <text x="590" y="212" text-anchor="middle" font-size="6.5" fill="#e3b341" font-weight="700">anomaly-</text>
-      <text x="590" y="224" text-anchor="middle" font-size="6.5" fill="#e3b341" font-weight="700">scores</text>
-
-      <!-- drift-events -->
-      <rect x="786" y="188" width="46" height="40" rx="6" fill="#21262d" stroke="#e3b341" stroke-width="1"/>
-      <text x="809" y="202" text-anchor="middle" font-size="6.5" fill="#e3b341" font-weight="700">drift-</text>
-      <text x="809" y="214" text-anchor="middle" font-size="6.5" fill="#e3b341" font-weight="700">events</text>
-
-      <!-- retraining-triggers -->
-      <rect x="786" y="205" width="46" height="40" rx="6" fill="#21262d" stroke="#e3b341" stroke-width="1"/>
-      <text x="809" y="219" text-anchor="middle" font-size="6.5" fill="#e3b341" font-weight="700">retrain-</text>
-      <text x="809" y="231" text-anchor="middle" font-size="6.5" fill="#e3b341" font-weight="700">triggers</text>
-
-      <!-- alerts -->
-      <rect x="786" y="220" width="46" height="40" rx="6" fill="#21262d" stroke="#e3b341" stroke-width="1"/>
-      <text x="809" y="234" text-anchor="middle" font-size="6.5" fill="#e3b341" font-weight="700">alerts</text>
-
-      <!-- ─── ARROWS: service → topic → service ─── -->
-
-      <!-- Producer → raw-transactions topic -->
-      <line x1="158" y1="104" x2="172" y2="200" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
-
-      <!-- raw-transactions → Feature Engineer -->
-      <line x1="204" y1="200" x2="216" y2="110" stroke="#f0883e" stroke-width="1.5" marker-end="url(#arrowYellow)"/>
-
-      <!-- Feature Engineer → enriched-features -->
-      <line x1="360" y1="110" x2="372" y2="200" stroke="#f0883e" stroke-width="1.5" marker-end="url(#arrowYellow)"/>
-
-      <!-- enriched-features → ML Inference -->
-      <line x1="414" y1="200" x2="420" y2="110" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
-
-      <!-- ML Inference → anomaly-scores -->
-      <line x1="562" y1="110" x2="572" y2="200" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
-
-      <!-- anomaly-scores → Drift Detector (up-right) -->
-      <path d="M613,200 C625,180 630,120 635,86" stroke="#bc8cff" stroke-width="1.5" fill="none" marker-end="url(#arrowPurple)"/>
-
-      <!-- anomaly-scores → Alert Router (right-down) -->
-      <path d="M613,218 C624,220 629,218 635,213" stroke="#f85149" stroke-width="1.5" fill="none" marker-end="url(#arrowRed)"/>
-
-      <!-- Drift Detector → drift-events + retraining-triggers -->
-      <line x1="783" y1="86" x2="800" y2="200" stroke="#bc8cff" stroke-width="1.5" marker-end="url(#arrowPurple)"/>
-
-      <!-- retraining-triggers → Retraining Worker -->
-      <path d="M832,218 C843,210 850,110 855,104" stroke="#79c0ff" stroke-width="1.5" fill="none" marker-end="url(#arrowBlue)"/>
-
-      <!-- Alert Router → alerts topic -->
-      <line x1="783" y1="218" x2="800" y2="230" stroke="#f85149" stroke-width="1.5" marker-end="url(#arrowRed)"/>
-
-      <!-- Retraining Worker → Redis (active_model) arrow down -->
-      <path d="M929,160 L929,345" stroke="#79c0ff" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrowBlue)"/>
-      <text x="940" y="290" font-size="7.5" fill="#79c0ff">active_model</text>
-
-      <!-- ML Inference ↔ Redis -->
-      <path d="M489,160 L489,345" stroke="#3fb950" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrowGreen)"/>
-      <text x="494" y="290" font-size="7.5" fill="#3fb950">model read/write</text>
-
-      <!-- Feature Engineer → Redis windows -->
-      <path d="M284,160 L284,345" stroke="#f0883e" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrowYellow)"/>
-      <text x="294" y="290" font-size="7.5" fill="#f0883e">sliding windows</text>
-
-      <!-- Alert Router → TimescaleDB -->
-      <path d="M709,256 L709,345" stroke="#f85149" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrowRed)"/>
-      <text x="718" y="310" font-size="7.5" fill="#f85149">alerts table</text>
-
-      <!-- ML Inference → TimescaleDB -->
-      <path d="M530,160 Q550,320 600,350" stroke="#3fb950" stroke-width="1.2" stroke-dasharray="4,3" fill="none" marker-end="url(#arrowGreen)"/>
-      <text x="545" y="320" font-size="7.5" fill="#3fb950">scored_events</text>
-
-      <!-- ─── INFRASTRUCTURE BOXES ─── -->
-
-      <!-- Redis -->
-      <rect x="200" y="345" width="140" height="60" rx="8" fill="#161b22" stroke="#e3b341" stroke-width="1.5"/>
-      <text x="270" y="365" text-anchor="middle" font-size="14">⚡</text>
-      <text x="270" y="381" text-anchor="middle" font-size="10" font-weight="700" fill="#e3b341">Redis 7</text>
-      <text x="270" y="394" text-anchor="middle" font-size="8"  fill="#8b949e">:6379 · Windows · Models · Dedup · Celery broker</text>
-
-      <!-- TimescaleDB -->
-      <rect x="560" y="345" width="140" height="60" rx="8" fill="#161b22" stroke="#58a6ff" stroke-width="1.5"/>
-      <text x="630" y="365" text-anchor="middle" font-size="14">🐘</text>
-      <text x="630" y="381" text-anchor="middle" font-size="10" font-weight="700" fill="#58a6ff">TimescaleDB</text>
-      <text x="630" y="394" text-anchor="middle" font-size="8"  fill="#8b949e">:5432 · scored_events · drift_events · alerts</text>
-
-      <!-- Prometheus -->
-      <rect x="20" y="345" width="130" height="60" rx="8" fill="#161b22" stroke="#f0883e" stroke-width="1.5"/>
-      <text x="85" y="365" text-anchor="middle" font-size="14">📊</text>
-      <text x="85" y="381" text-anchor="middle" font-size="10" font-weight="700" fill="#f0883e">Prometheus</text>
-      <text x="85" y="394" text-anchor="middle" font-size="8"  fill="#8b949e">:9090 · scrapes all /metrics</text>
-
-      <!-- Grafana -->
-      <rect x="380" y="345" width="130" height="60" rx="8" fill="#161b22" stroke="#f85149" stroke-width="1.5"/>
-      <text x="445" y="365" text-anchor="middle" font-size="14">📈</text>
-      <text x="445" y="381" text-anchor="middle" font-size="10" font-weight="700" fill="#f85149">Grafana</text>
-      <text x="445" y="394" text-anchor="middle" font-size="8"  fill="#8b949e">:3000 · Dashboards · Alerts</text>
-
-      <!-- Kafka UI -->
-      <rect x="730" y="345" width="130" height="60" rx="8" fill="#161b22" stroke="#bc8cff" stroke-width="1.5"/>
-      <text x="795" y="365" text-anchor="middle" font-size="14">🗂️</text>
-      <text x="795" y="381" text-anchor="middle" font-size="10" font-weight="700" fill="#bc8cff">Kafka UI</text>
-      <text x="795" y="394" text-anchor="middle" font-size="8"  fill="#8b949e">:8080 · Browse topics &amp; messages</text>
-
-      <!-- Schema Registry -->
-      <rect x="900" y="345" width="130" height="60" rx="8" fill="#161b22" stroke="#3fb950" stroke-width="1.5"/>
-      <text x="965" y="365" text-anchor="middle" font-size="14">🗃️</text>
-      <text x="965" y="381" text-anchor="middle" font-size="10" font-weight="700" fill="#3fb950">Schema Registry</text>
-      <text x="965" y="394" text-anchor="middle" font-size="8"  fill="#8b949e">:8081 · Confluent CP 7.4.0</text>
-
-      <!-- Prometheus → Grafana -->
-      <line x1="150" y1="375" x2="380" y2="375" stroke="#f0883e" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arrowYellow)"/>
-
-      <!-- Prometheus scrapes (dotted to services) -->
-      <path d="M85,345 Q80,280 89,160" stroke="#f0883e" stroke-width="1" stroke-dasharray="2,4" fill="none"/>
-
-      <!-- ─── LEGEND ─── -->
-      <text x="20" y="420" font-size="8" fill="#8b949e">──── Kafka message flow</text>
-      <text x="160" y="420" font-size="8" fill="#8b949e">- - - Redis / DB side-channel</text>
-      <text x="320" y="420" font-size="8" fill="#8b949e">· · · Prometheus scrape</text>
-
-    </svg>
-  </div>
-
-  <!-- ─────────────── PIPELINE STAGES ─────────────── -->
-  <div class="section-title">Pipeline Stages (hover for details)</div>
-
-  <div class="pipeline-wrapper">
-    <div class="pipeline">
-
-      <!-- Producer -->
-      <div class="svc blue">
-        <span class="svc-icon">🏭</span>
-        <div class="svc-name">Producer</div>
-        <div class="svc-port">:8001</div>
-        <div class="svc-tech tech-blue">kafka-python</div>
-        <div class="svc-desc">Generates synthetic financial events at configurable rate. Cycles Normal → Drift → Attack phases.</div>
-        <div class="tooltip">
-          <h4>Producer</h4>
-          <ul>
-            <li>Emits 100 events/sec to <code>raw-transactions</code></li>
-            <li>3 phases: Normal (0–99k), Drift (100k–199k), Attack (200k–249k), then repeats</li>
-            <li>Fields: event_id, user_id, amount, merchant, location, device, hour_of_day, risk_score_raw, anomaly_label, phase</li>
-            <li>Also publishes to <code>phase-transitions</code> on phase change</li>
-            <li>Metrics: events_produced_total, current_phase, anomaly_label_rate</li>
-          </ul>
+    <!-- DRIFT DETECTOR + ALERT ROUTER -->
+    <div class="split">
+      <div class="block drift">
+        <div class="block-title">DRIFT DETECTOR</div>
+        <div class="block-desc">
+          <span>Watches for shifts in feature distributions (ADWIN)</span>
+          <span>Watches for concept drift in error rate (DDM)</span>
+          <span>300s cooldown between triggers</span>
         </div>
       </div>
-
-      <div class="arrow">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-          <svg viewBox="0 0 44 16"><line x1="2" y1="8" x2="36" y2="8" stroke="#e3b341" stroke-width="1.5" marker-end="url(#a)"/><defs><marker id="a" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#e3b341"/></marker></defs></svg>
-          <div class="topic-pill">raw-transactions</div>
+      <div class="block alert">
+        <div class="block-title">ALERT ROUTER</div>
+        <div class="block-desc">
+          <span>Filters events where is_anomaly = true</span>
+          <span>Deduplicates via Redis TTL</span>
+          <span>Buckets into LOW / MEDIUM / HIGH / CRITICAL</span>
+          <span>Sends Slack webhook for HIGH+</span>
         </div>
       </div>
+    </div>
 
-      <!-- Feature Engineer -->
-      <div class="svc orange">
-        <span class="svc-icon">⚙️</span>
-        <div class="svc-name">Feature Engineer</div>
-        <div class="svc-port">:8002</div>
-        <div class="svc-tech tech-orange">Faust Streaming</div>
-        <div class="svc-desc">Computes per-user sliding-window features using Redis. Publishes enriched events.</div>
-        <div class="tooltip">
-          <h4>Feature Engineer</h4>
-          <ul>
-            <li>Reads <code>raw-transactions</code>, writes <code>enriched-features</code></li>
-            <li>Redis keys: per-user amount history, tx count windows (1min, 5min, 1hr)</li>
-            <li>Features added: amount_zscore, tx_velocity_ratio, amount_vs_user_avg, is_high_risk_merchant, is_odd_hour, location_match, device_known</li>
-            <li>Faust agent with async processing</li>
-            <li>Metrics: events_enriched_total, enrichment_latency_seconds</li>
-          </ul>
-        </div>
+    <div class="split-arrows">
+      <div class="arrow">&darr;</div>
+      <div class="arrow">&darr;</div>
+    </div>
+
+    <div class="split">
+      <div class="topic"><span class="topic-pill">Kafka: retraining-triggers</span></div>
+      <div class="topic"><span class="topic-pill">TimescaleDB: alerts</span></div>
+    </div>
+
+    <div class="split-arrows">
+      <div class="arrow">&darr;</div>
+      <div class="arrow"></div>
+    </div>
+
+    <!-- RETRAINING WORKER -->
+    <div class="block retrain">
+      <div class="block-title">RETRAINING WORKER</div>
+      <div class="block-desc">
+        <span>Trains a fresh model on recent data from TimescaleDB</span>
+        <span>Shadow-tests it: runs old and new model in parallel</span>
+        <span>Promotes new model to Redis only if accuracy improves</span>
       </div>
+    </div>
 
-      <div class="arrow">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-          <svg viewBox="0 0 44 16"><line x1="2" y1="8" x2="36" y2="8" stroke="#e3b341" stroke-width="1.5" marker-end="url(#a)"/></svg>
-          <div class="topic-pill">enriched-features</div>
-        </div>
+    <div class="arrow">&darr;</div>
+
+    <div class="redis-note">
+      <strong>Redis</strong> &mdash; new model written to key <code>active_model</code>
+    </div>
+
+    <div class="arrow">&darr;</div>
+
+    <div class="block inference" style="border-style: dashed; opacity: 0.75;">
+      <div class="block-title">ML INFERENCE</div>
+      <div class="block-desc">
+        <span>Polls Redis every 1000 events for a new model version</span>
+        <span>Hot-swaps the model in-place &mdash; zero downtime</span>
       </div>
+    </div>
 
-      <!-- ML Inference -->
-      <div class="svc green">
-        <span class="svc-icon">🤖</span>
-        <div class="svc-name">ML Inference</div>
-        <div class="svc-port">:8003</div>
-        <div class="svc-tech tech-green">River HalfSpaceTrees</div>
-        <div class="svc-desc">Online anomaly scoring. Updates model on each event. Dynamic threshold. Persists to Redis.</div>
-        <div class="tooltip">
-          <h4>ML Inference</h4>
-          <ul>
-            <li>Reads <code>enriched-features</code>, writes <code>anomaly-scores</code></li>
-            <li>Ensemble: 70% HalfSpaceTrees + 30% StandardAbsoluteDeviation</li>
-            <li>Dynamic threshold: adjusts ±0.01 targeting 0.1%–5% anomaly rate</li>
-            <li>Model persistence: pickles to Redis key <code>active_model</code> every 1000 events</li>
-            <li>BatchWriter flushes scored_events → TimescaleDB every 100 rows or 5s</li>
-            <li>Metrics: events_processed_total, anomalies_detected_total, anomaly_score, current_threshold, model_version, rolling_anomaly_rate</li>
-          </ul>
-        </div>
+    <!-- OBSERVABILITY -->
+    <hr class="divider" />
+    <div class="everything-label">All services feed into &darr;</div>
+
+    <div class="storage-row">
+      <div class="storage-item">
+        <div class="label">TIMESCALEDB</div>
+        <div class="desc">Permanent storage<br/>scored_events, alerts,<br/>drift_events, model_versions</div>
       </div>
-
-      <div class="arrow">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-          <svg viewBox="0 0 44 16"><line x1="2" y1="8" x2="36" y2="8" stroke="#e3b341" stroke-width="1.5" marker-end="url(#a)"/></svg>
-          <div class="topic-pill">anomaly-scores</div>
-        </div>
+      <div class="storage-item">
+        <div class="label">PROMETHEUS</div>
+        <div class="desc">Scrapes /metrics<br/>from all 6 services<br/>every 15 seconds</div>
       </div>
-
-      <!-- Split: Drift + Alert -->
-      <div style="display:flex;flex-direction:column;gap:10px;flex:1;min-width:155px;">
-
-        <div class="svc purple" style="flex:1">
-          <span class="svc-icon">📡</span>
-          <div class="svc-name">Drift Detector</div>
-          <div class="svc-port">:8004</div>
-          <div class="svc-tech tech-purple">River ADWIN + DDM</div>
-          <div class="svc-desc">Detects data & concept drift. Fires retraining triggers.</div>
-          <div class="tooltip">
-            <h4>Drift Detector</h4>
-            <ul>
-              <li>Reads <code>anomaly-scores</code></li>
-              <li>ADWIN on: amount, amount_zscore, anomaly_score (data drift)</li>
-              <li>DDM on prediction error rate (concept drift)</li>
-              <li>Publishes drift events to <code>drift-events</code> + <code>retraining-triggers</code></li>
-              <li>Writes to TimescaleDB <code>drift_events</code> table</li>
-              <li>Metrics: drift_events_total{type,feature}, time_since_last_drift_seconds</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="svc red" style="flex:1">
-          <span class="svc-icon">🚨</span>
-          <div class="svc-name">Alert Router</div>
-          <div class="svc-port">:8006</div>
-          <div class="svc-tech tech-red">kafka-python</div>
-          <div class="svc-desc">Severity bucketing, dedup via Redis TTL, Slack fanout.</div>
-          <div class="tooltip">
-            <h4>Alert Router</h4>
-            <ul>
-              <li>Reads <code>anomaly-scores</code>, writes <code>alerts</code></li>
-              <li>4 severity levels: LOW / MEDIUM / HIGH / CRITICAL</li>
-              <li>Redis dedup TTLs: LOW=600s, MEDIUM=300s, HIGH=120s, CRITICAL=60s</li>
-              <li>Slack webhooks for severity ≥ MIN_SLACK_SEVERITY (default HIGH)</li>
-              <li>BatchWriter flushes alerts → TimescaleDB</li>
-              <li>Metrics: alerts_fired_total{severity}, alerts_deduplicated_total</li>
-            </ul>
-          </div>
-        </div>
-
+      <div class="storage-item">
+        <div class="label">GRAFANA</div>
+        <div class="desc">Live dashboards<br/>Queries Prometheus<br/>and TimescaleDB</div>
       </div>
-
-      <div class="arrow">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-          <svg viewBox="0 0 44 16"><line x1="2" y1="8" x2="36" y2="8" stroke="#e3b341" stroke-width="1.5" marker-end="url(#a)"/></svg>
-          <div class="topic-pill">retraining-triggers</div>
-        </div>
-      </div>
-
-      <!-- Retraining Worker -->
-      <div class="svc cyan">
-        <span class="svc-icon">🔁</span>
-        <div class="svc-name">Retraining Worker</div>
-        <div class="svc-port">:8005 / :5555</div>
-        <div class="svc-tech tech-cyan">Celery + River</div>
-        <div class="svc-desc">Trains new model on recent data. Shadow-tests vs incumbent. Promotes if better.</div>
-        <div class="tooltip">
-          <h4>Retraining Worker</h4>
-          <ul>
-            <li>Reads <code>retraining-triggers</code> via Kafka consumer loop</li>
-            <li>Dispatches <code>retrain_model</code> Celery task (Redis broker)</li>
-            <li>Fetches last 50,000 rows from TimescaleDB <code>scored_events</code></li>
-            <li>Trains new HalfSpaceTrees + SAD ensemble</li>
-            <li>Shadow-tests on last 200 events vs incumbent</li>
-            <li>Promotes if new precision ≥ old precision → writes to Redis <code>active_model</code></li>
-            <li>Logs new version to <code>model_versions</code> table</li>
-            <li>Flower UI on :5555 for Celery task monitoring</li>
-            <li>Metrics: retraining_runs_total, retraining_duration_seconds, model_promotions_total</li>
-          </ul>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ─────────────── KAFKA TOPICS ─────────────── -->
-  <div class="section-title">Kafka Topics (3 partitions each)</div>
-  <div class="topics-row">
-    <div class="topic-card">
-      <strong>raw-transactions</strong>
-      <span>Raw synthetic financial events from Producer. Schema: event_id, user_id, amount, merchant, phase, anomaly_label, risk_score_raw.</span>
-    </div>
-    <div class="topic-card">
-      <strong>enriched-features</strong>
-      <span>Feature-engineered events from Feature Engineer. Adds sliding-window statistics, Z-scores, velocity ratios.</span>
-    </div>
-    <div class="topic-card">
-      <strong>anomaly-scores</strong>
-      <span>ML-scored events with anomaly_score, is_anomaly flag, threshold_used, model_version. Read by both Drift Detector and Alert Router.</span>
-    </div>
-    <div class="topic-card">
-      <strong>drift-events</strong>
-      <span>Drift detection alerts with drift_type (data|concept), feature name, detector (ADWIN|DDM), timestamp.</span>
-    </div>
-    <div class="topic-card">
-      <strong>retraining-triggers</strong>
-      <span>Signals from Drift Detector to trigger model retraining. Includes reason (data_drift|concept_drift) and urgency.</span>
-    </div>
-    <div class="topic-card">
-      <strong>alerts</strong>
-      <span>Processed anomaly alerts after severity bucketing and deduplication. Consumed by downstream dashboards.</span>
-    </div>
-    <div class="topic-card">
-      <strong>phase-transitions</strong>
-      <span>Emitted by Producer when simulation phase changes (Normal → Drift → Attack). Used for labelling and monitoring.</span>
-    </div>
-  </div>
-
-  <!-- ─────────────── PHASE SIMULATION ─────────────── -->
-  <div class="section-title">Phase Simulation Cycle</div>
-  <div class="phase-row">
-    <div class="phase-card phase-normal">
-      <div class="phase-label">Normal Phase</div>
-      <div class="phase-range">Events 0 – 99,999</div>
-      <div class="phase-desc">Baseline financial transactions. Low anomaly rate (~0.5%). Amount drawn from normal distribution (μ=150, σ=50). Model learns typical behaviour via online updates.</div>
-    </div>
-    <div class="phase-card phase-drift">
-      <div class="phase-label">Drift Phase</div>
-      <div class="phase-range">Events 100,000 – 199,999</div>
-      <div class="phase-desc">Distribution shift: higher amounts, different merchant mix. ADWIN detects shift in amount/amount_zscore/anomaly_score within ~1–2 min. Triggers retraining to adapt the model.</div>
-    </div>
-    <div class="phase-card phase-attack">
-      <div class="phase-label">Attack Phase</div>
-      <div class="phase-range">Events 200,000 – 249,999</div>
-      <div class="phase-desc">Simulated fraud burst. High-amount transactions, unusual hours, unknown devices. Anomaly rate spikes. DDM detects prediction error rate increase (concept drift). Cycle repeats.</div>
-    </div>
-  </div>
-
-  <!-- ─────────────── DATA FLOW TABLE ─────────────── -->
-  <div class="section-title">Data Flow Reference</div>
-  <table class="flow-table">
-    <thead>
-      <tr>
-        <th>Service</th>
-        <th>Consumes (Kafka)</th>
-        <th>Produces (Kafka)</th>
-        <th>Redis</th>
-        <th>TimescaleDB</th>
-        <th>Port</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>🏭 Producer</td>
-        <td>—</td>
-        <td><code>raw-transactions</code>, <code>phase-transitions</code></td>
-        <td>—</td>
-        <td>—</td>
-        <td>8001</td>
-      </tr>
-      <tr>
-        <td>⚙️ Feature Engineer</td>
-        <td><code>raw-transactions</code></td>
-        <td><code>enriched-features</code></td>
-        <td>Sliding-window history per user_id</td>
-        <td>—</td>
-        <td>8002</td>
-      </tr>
-      <tr>
-        <td>🤖 ML Inference</td>
-        <td><code>enriched-features</code></td>
-        <td><code>anomaly-scores</code></td>
-        <td><code>active_model</code> (read+write), <code>model_version</code></td>
-        <td><code>scored_events</code> (batched)</td>
-        <td>8003</td>
-      </tr>
-      <tr>
-        <td>📡 Drift Detector</td>
-        <td><code>anomaly-scores</code></td>
-        <td><code>drift-events</code>, <code>retraining-triggers</code></td>
-        <td>—</td>
-        <td><code>drift_events</code> (batched)</td>
-        <td>8004</td>
-      </tr>
-      <tr>
-        <td>🔁 Retraining Worker</td>
-        <td><code>retraining-triggers</code></td>
-        <td>—</td>
-        <td><code>active_model</code> (write), <code>model_version</code>, Celery broker</td>
-        <td>reads <code>scored_events</code>, writes <code>model_versions</code></td>
-        <td>8005 / 5555</td>
-      </tr>
-      <tr>
-        <td>🚨 Alert Router</td>
-        <td><code>anomaly-scores</code></td>
-        <td><code>alerts</code></td>
-        <td>Dedup TTL keys per event_id+severity</td>
-        <td><code>alerts</code> (batched)</td>
-        <td>8006</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <!-- ─────────────── INFRASTRUCTURE ─────────────── -->
-  <div class="section-title">Infrastructure Components</div>
-  <div class="infra-grid">
-
-    <div class="infra-card">
-      <div class="infra-icon">🟡</div>
-      <div class="infra-name">Apache Kafka</div>
-      <div class="infra-sub">Confluent 7.4.0 · 29092 internal / 9092 external</div>
-      <ul class="infra-list">
-        <li>7 topics, 3 partitions each</li>
-        <li>Log retention: 2 hours</li>
-        <li>Auto topic creation enabled</li>
-        <li>Replication factor: 1 (single broker)</li>
-      </ul>
-    </div>
-
-    <div class="infra-card">
-      <div class="infra-icon">🔴</div>
-      <div class="infra-name">Redis 7</div>
-      <div class="infra-sub">Port 6379</div>
-      <ul class="infra-list">
-        <li>Sliding-window feature state (feature-engineer)</li>
-        <li>Pickled model storage — key: <code>active_model</code></li>
-        <li>Model version counter — key: <code>model_version</code></li>
-        <li>Alert dedup TTL keys per event+severity</li>
-        <li>Celery task broker + result backend</li>
-      </ul>
-    </div>
-
-    <div class="infra-card">
-      <div class="infra-icon">🐘</div>
-      <div class="infra-name">TimescaleDB</div>
-      <div class="infra-sub">latest-pg15 · Port 5432</div>
-      <ul class="infra-list">
-        <li><code>scored_events</code> hypertable (partitioned by timestamp)</li>
-        <li><code>drift_events</code> hypertable</li>
-        <li><code>alerts</code> hypertable</li>
-        <li><code>model_versions</code> hypertable</li>
-        <li>BatchWriter: flush every 100 rows or 5s</li>
-      </ul>
-    </div>
-
-    <div class="infra-card">
-      <div class="infra-icon">📊</div>
-      <div class="infra-name">Prometheus</div>
-      <div class="infra-sub">v2.45.0 · Port 9090</div>
-      <ul class="infra-list">
-        <li>Scrapes <code>/metrics</code> from all 6 services</li>
-        <li>Retention: 7 days</li>
-        <li>~30 custom metrics total</li>
-      </ul>
-    </div>
-
-    <div class="infra-card">
-      <div class="infra-icon">📈</div>
-      <div class="infra-name">Grafana</div>
-      <div class="infra-sub">10.0.0 · Port 3000</div>
-      <ul class="infra-list">
-        <li>Pre-provisioned dashboards</li>
-        <li>Two datasources: Prometheus + TimescaleDB</li>
-        <li>Datasource UIDs: <code>prometheus</code>, <code>timescaledb</code></li>
-        <li>Default admin password: <code>admin</code></li>
-      </ul>
-    </div>
-
-    <div class="infra-card">
-      <div class="infra-icon">🗂️</div>
-      <div class="infra-name">Kafka UI + Schema Registry</div>
-      <div class="infra-sub">Provectus UI :8080 · Confluent :8081</div>
-      <ul class="infra-list">
-        <li>Browse topics, consumer groups, offsets</li>
-        <li>Inspect messages in real time</li>
-        <li>Schema registry for Avro schemas</li>
-        <li>ZooKeeper: Confluent 7.4.0 · Port 2181</li>
-      </ul>
     </div>
 
   </div>
-
-  <!-- ─────────────── PROMETHEUS METRICS ─────────────── -->
-  <div class="section-title">Prometheus Metrics</div>
-  <div class="metrics-grid">
-
-    <div class="metrics-card">
-      <div class="metrics-service">Producer · :8001/metrics</div>
-      <div class="metric-item"><span class="metric-name">events_produced_total</span><span class="metric-desc">Counter — total events emitted to Kafka</span></div>
-      <div class="metric-item"><span class="metric-name">current_phase</span><span class="metric-desc">Gauge — 0=normal, 1=drift, 2=attack</span></div>
-      <div class="metric-item"><span class="metric-name">anomaly_label_rate</span><span class="metric-desc">Gauge — rolling anomaly fraction over last 1000 events</span></div>
-    </div>
-
-    <div class="metrics-card">
-      <div class="metrics-service">Feature Engineer · :8002/metrics</div>
-      <div class="metric-item"><span class="metric-name">events_enriched_total</span><span class="metric-desc">Counter — events successfully enriched</span></div>
-      <div class="metric-item"><span class="metric-name">enrichment_latency_seconds</span><span class="metric-desc">Histogram — per-event feature engineering latency</span></div>
-    </div>
-
-    <div class="metrics-card">
-      <div class="metrics-service">ML Inference · :8003/metrics</div>
-      <div class="metric-item"><span class="metric-name">events_processed_total</span><span class="metric-desc">Counter — total events scored</span></div>
-      <div class="metric-item"><span class="metric-name">anomalies_detected_total</span><span class="metric-desc">Counter — events classified as anomalous</span></div>
-      <div class="metric-item"><span class="metric-name">anomaly_score</span><span class="metric-desc">Gauge — most recent ensemble anomaly score</span></div>
-      <div class="metric-item"><span class="metric-name">current_threshold</span><span class="metric-desc">Gauge — live classification threshold</span></div>
-      <div class="metric-item"><span class="metric-name">model_version</span><span class="metric-desc">Gauge — active model version number</span></div>
-      <div class="metric-item"><span class="metric-name">rolling_anomaly_rate</span><span class="metric-desc">Gauge — recent anomaly rate (drives threshold)</span></div>
-    </div>
-
-    <div class="metrics-card">
-      <div class="metrics-service">Drift Detector · :8004/metrics</div>
-      <div class="metric-item"><span class="metric-name">drift_events_total{type,feature}</span><span class="metric-desc">Counter — drift detections by type and feature</span></div>
-      <div class="metric-item"><span class="metric-name">time_since_last_drift_seconds</span><span class="metric-desc">Gauge — seconds since last drift event</span></div>
-    </div>
-
-    <div class="metrics-card">
-      <div class="metrics-service">Retraining Worker · :8005/metrics</div>
-      <div class="metric-item"><span class="metric-name">retraining_runs_total</span><span class="metric-desc">Counter — total retraining jobs executed</span></div>
-      <div class="metric-item"><span class="metric-name">retraining_duration_seconds</span><span class="metric-desc">Histogram — time per retraining run</span></div>
-      <div class="metric-item"><span class="metric-name">model_promotions_total</span><span class="metric-desc">Counter — number of times new model was promoted</span></div>
-      <div class="metric-item"><span class="metric-name">last_retraining_timestamp</span><span class="metric-desc">Gauge — Unix timestamp of most recent retraining</span></div>
-    </div>
-
-    <div class="metrics-card">
-      <div class="metrics-service">Alert Router · :8006/metrics</div>
-      <div class="metric-item"><span class="metric-name">alerts_fired_total{severity}</span><span class="metric-desc">Counter — alerts fired per severity level</span></div>
-      <div class="metric-item"><span class="metric-name">alerts_deduplicated_total</span><span class="metric-desc">Counter — suppressed duplicate alerts</span></div>
-    </div>
-
-  </div>
-
-  <!-- ─────────────── KEY DESIGN DECISIONS ─────────────── -->
-  <div class="section-title">Key Design Decisions</div>
-  <table class="flow-table">
-    <thead>
-      <tr><th>Decision</th><th>Rationale</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><strong>Online learning (River)</strong></td>
-        <td>HalfSpaceTrees updates on each event — no batch training cycle, no cold-start latency. Adapts continuously to distribution shifts.</td>
-      </tr>
-      <tr>
-        <td><strong>Ensemble scoring (HST + SAD)</strong></td>
-        <td>70% HalfSpaceTrees (tree-based anomaly isolation) + 30% StandardAbsoluteDeviation (statistical baseline). Blend reduces false positive rate.</td>
-      </tr>
-      <tr>
-        <td><strong>Dynamic threshold</strong></td>
-        <td>Threshold adjusts ±0.01 per evaluation cycle, targeting 0.1%–5% anomaly rate. Prevents alert fatigue during drift phases without manual tuning.</td>
-      </tr>
-      <tr>
-        <td><strong>Model persistence via Redis</strong></td>
-        <td>Pickled model stored in Redis <code>active_model</code> key every 1000 events. Survives container restarts. Retraining worker overwrites atomically on promotion.</td>
-      </tr>
-      <tr>
-        <td><strong>Celery subprocess (no recursion)</strong></td>
-        <td>Retraining worker spawns <code>celery -A main worker</code> as a subprocess. Celery imports <code>main</code> as a module (not <code>__main__</code>), so the subprocess guard prevents infinite recursion.</td>
-      </tr>
-      <tr>
-        <td><strong>BatchWriter pattern</strong></td>
-        <td>All TimescaleDB writes flush every 100 rows OR every 5s via a background thread. Batching reduces DB round-trips by ~100x vs. per-event inserts.</td>
-      </tr>
-      <tr>
-        <td><strong>Shadow testing before promotion</strong></td>
-        <td>New model is compared against incumbent on the most recent 200 events. Only promoted if new precision ≥ old precision. Guards against degraded models from drift transients.</td>
-      </tr>
-      <tr>
-        <td><strong>Redis dedup for alerts</strong></td>
-        <td>Per-severity TTLs (LOW=600s … CRITICAL=60s) prevent alert storms. Same event cannot fire the same severity again until TTL expires.</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <!-- ─────────────── QUICK START ─────────────── -->
-  <div class="section-title">Quick Start</div>
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;margin-bottom:3rem;font-family:'SFMono-Regular',Consolas,monospace;font-size:0.8rem;line-height:2;">
-    <span style="color:#8b949e"># Start the full stack (15 containers)</span><br>
-    <span style="color:#3fb950">cd</span> <span style="color:#e6edf3">anomaly-detection</span><br>
-    <span style="color:#3fb950">docker compose up --build</span><br><br>
-    <span style="color:#8b949e"># Endpoints</span><br>
-    <span style="color:#79c0ff">Kafka UI</span>       <span style="color:#8b949e">→</span> <span style="color:#e3b341">http://localhost:8080</span><br>
-    <span style="color:#79c0ff">Grafana</span>        <span style="color:#8b949e">→</span> <span style="color:#e3b341">http://localhost:3000</span>  <span style="color:#8b949e">(admin / admin)</span><br>
-    <span style="color:#79c0ff">Prometheus</span>     <span style="color:#8b949e">→</span> <span style="color:#e3b341">http://localhost:9090</span><br>
-    <span style="color:#79c0ff">Celery Flower</span>  <span style="color:#8b949e">→</span> <span style="color:#e3b341">http://localhost:5555</span><br>
-    <span style="color:#79c0ff">Schema Reg</span>     <span style="color:#8b949e">→</span> <span style="color:#e3b341">http://localhost:8081</span><br><br>
-    <span style="color:#8b949e"># Stop and wipe volumes</span><br>
-    <span style="color:#f85149">docker compose down -v</span>
-  </div>
-
-</main>
-
-<footer>
-  Real-Time Anomaly Detection Pipeline &mdash; 6 microservices &middot; Kafka &middot; Redis &middot; TimescaleDB &middot; River Online ML &middot; Prometheus &middot; Grafana
-</footer>
 
 </body>
 </html>
